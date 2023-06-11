@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS executors_genres(
 CREATE TABLE IF NOT EXISTS albums(
 	album_id SERIAL PRIMARY KEY,
 	name VARCHAR(60) NOT NULL,
-	year_of_release VARCHAR(60) NOT NULL
+	year_of_release INTEGER CHECK (year_of_release > 0)
 );
 
 CREATE TABLE IF NOT EXISTS executors_albums(
@@ -30,13 +30,13 @@ CREATE TABLE IF NOT EXISTS tracks(
 	track_id SERIAL PRIMARY KEY,
 	album_id INTEGER REFERENCES albums(album_id),
 	name VARCHAR(60) NOT NULL,
-	duration INTEGER CHECK (duration > 0)
+	duration time NOT NULL CHECK  (duration < '10:00:00')
 );
 
 CREATE TABLE IF NOT EXISTS collections(
 	collection_id SERIAL PRIMARY KEY,
 	name VARCHAR(60) NOT NULL,
-	year VARCHAR(60) NOT NULL
+	year INTEGER CHECK (year > 0)
 );
 
 CREATE TABLE IF NOT EXISTS collections_tracks(
