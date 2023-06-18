@@ -1,95 +1,79 @@
 import psycopg2
 
-def create_db(conn):
-    cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS customers(
-        client_id INTEGER UNIQUE PRIMARY KEY,
-        first_name VARCHAR(40),
-        last_name VARCHAR(60),
-        email VARCHAR(60));""")
-    cur.execute("""CREATE TABLE IF NOT EXISTS phones(
-        id SERIAL PRIMARY KEY,
-        client_id INTEGER REFERENCES customers(client_id),
-        phone VARCHAR(12));""")
-    conn.commit()
-
-def add_client(conn,client_id, first_name, last_name, email, phones=None):
-    cur = conn.cursor()
+def delete_db():
     cur.execute("""
-           INSERT INTO customers(client_id, first_name, last_name, email) VALUES(%s, %s, %s, %s);
-           """, (client_id, first_name, last_name, email))
-    conn.commit()
-    cur.execute("""SELECT * FROM customers;""")
-    print(cur.fetchall())
-
-    cur.execute("""
-           INSERT INTO phones(client_id, phone) VALUES(%s, %s);
-           """, (client_id, phones))
-    conn.commit()
-    cur.execute("""SELECT * FROM phones;""")
-    print(cur.fetchall())
+            DROP TABLE person, Phone CASCADE;
+            """)
 
 
-def add_phone(conn, client_id, phone):
-    cur = conn.cursor()
-    cur.execute("""
-    UPDATE phones SET phone=%s WHERE client_id=%s;
-    """, (phone, client_id))
-    conn.commit()
+def create_structure():
+    cur.execute('''CREATE TABLE IF NOT EXISTS person(
+            PersonID SERIAL Primary Key,
+            name VARCHAR(60) not null,
+            surname VARCHAR(60) not null,
+            email VARCHAR(70) not null);
+
+            CREATE TABLE IF NOT EXISTS Phone
+            (number VARCHAR(11) NOT NULL Primary Key,
+            PersonID INTEGER REFERENCES Person(PersonID))''')
+
+def add_new_client(name, surname, email):
+    cur.execute('''INSERT INTO Person(name, surname, email) VALUES(%s, %s, %s);''', (name, surname, email))
+
+def add_phone_number(number, client_id):
+    cur.execute('''INSERT INTO Phone(number, PersonID) VALUES(%s, %s);''', (number, client_id))
 
 
-def change_client(conn, client_id, first_name=None, last_name=None, email=None, phones=None):
-    cur = conn.cursor()
-    cur.execute("""
-    UPDATE customers SET first_name=%s, last_name=%s, email=%s WHERE client_id=%s;
-    """, (first_name, last_name, email, client_id))
-    cur.execute("""SELECT * FROM customers;""")
-    print(cur.fetchall())
-    cur.execute("""
-    UPDATE phones SET phone=%s WHERE client_id=%s;
-    """, (phones, client_id))
-    cur.execute("""SELECT * FROM phones;""")
-    print(cur.fetchall())
+def change_clients_data(PersonID, name=None, surname=None, email=None, old_phone_number=None, new_phone_number=None):
+    if name != None:
+        cur.execute('''UPDATE person SET name = %s WHERE PersonID = %s;''', (name, PersonID,))
+    elif surname != None:
+        cur.execute('''UPDATE person SET surname = %s WHERE PersonID = %s;''', (surname, PersonID,))
+    elif email != None:
+        cur.execute('''UPDATE person SET email = %s WHERE PersonID = %s;''', (email, PersonID,))
+    elif old_phone_number != None:
+        cur.execute('''UPDATE phone SET number = %s WHERE number=%s;''', (new_phone_number, old_phone_number))
 
-def delete_phone(conn, client_id):
-    cur = conn.cursor()
-    cur.execute("""
-        DELETE FROM phones WHERE client_id=%s;
-        """, (client_id,))
-    cur.execute("""SELECT * FROM phones;""")
-    print(cur.fetchall())
 
-def delete_client(conn, client_id):
-    cur = conn.cursor()
-    cur.execute("""
-        DELETE FROM customers WHERE client_id=%s;
-        """, (client_id,))
-    cur.execute("""SELECT * FROM customers;""")
-    print(cur.fetchall())
-    cur.execute("""
-        DELETE FROM phones WHERE client_id=%s;
-        """, (client_id,))
-    cur.execute("""SELECT * FROM phones;""")
-    print(cur.fetchall())
+def delete_phone_number(phone_number):
+    cur.execute('''DELETE FROM phone WHERE number=%s;''', (phone_number,))
 
-def find_client(conn, first_name=None, last_name=None, email=None, phone=None):
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT * FROM customers c JOIN phones p ON c.client_id WHERE first_name=%s OR last_name=%s OR email=%s OR p.phone=%s
-        """, (first_name,last_name,email, phone))
-    print(cur.fetchall())
 
-with psycopg2.connect(database="postgres", user="postgres", password="Zxcvb425") as conn:
-    create_db(conn)
-    add_client(conn, 1, 'Nat', 'Ivanova', 'Iv.nat@mail.ru', '+79243152364')
-    add_client(conn, 2, 'Max', 'Petrov', 'petrov@gmail.com')
-    add_client(conn, 3, 'Alex', 'Lopuhin', 'LopAl@mail.ru', '+73542694456')
-    add_client(conn, 4, 'Alexandra', 'Lopuhina', 'LopAlexandra@mail.ru', '+73542654456')
-    add_phone(conn, 2, '+72362211236')
-    change_client(conn, 1, 'Masha', 'Knayb', 'KnaybM.@gmail.com', '+79642366599')
-    delete_phone(conn, 1)
-    delete_client(conn, 4)
-    find_client(conn, first_name='Nat')
-    find_client(conn, email='petrov@gmail.com')
+def delete_client(person_id):
+    cur.execute('''delete from phone where PersonID=%s;
+    DELETE  FROM person WHERE PersonID=%s;''', (person_id, person_id,))
 
-conn.close()
+
+def find_client(name=None, surname=None, email=None, number=None):
+    cur.execute('''SELECT person.personID FROM person
+    JOIN phone ph on ph.personID=person.personID
+    where name=%s or surname =%s or email=%s or number=%s;''', (name, surname, email, number,))
+
+
+
+if __name__ == "__main__":
+    with psycopg2.connect(database='postgres', user='postgres', password='Zxcvb425') as conn:
+        with conn.cursor() as cur:
+            delete_db()
+            create_structure()
+            add_new_client('Innokentiy', 'Petrov', 'spb@spb.ru')
+            add_new_client('Hero', 'Klin', 'ninja@gmail.com')
+            add_new_client('Mike', 'Tyson', '111@pk.com')
+            add_new_client('Vasya', 'Pupkin', 'hj@rambler.ru')
+            add_new_client('Aleksandra', 'Ivanova', 'abcde@mail.ru')
+
+            add_phone_number('89995555555', 1)
+            add_phone_number('45654565454', 1)
+            add_phone_number('86565656565', 2)
+            add_phone_number('89997778885', 4)
+            add_phone_number('89779979752', 5)
+            add_phone_number('89779979444', 5)
+
+            change_clients_data('2', name='Hero')
+            change_clients_data('2', old_phone_number='7', new_phone_number='5')
+
+            delete_phone_number('45654565454')
+
+            find_client(surname='Petrov')
+            find_client(number='89997778885')
+    conn.close()
